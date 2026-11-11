@@ -24,6 +24,7 @@
     <ProjectGuid>{533df24b-c1b1-4109-90ed-89cbdce40f28}</ProjectGuid>
     <RootNamespace>opnecvdemo</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>opencv-color-detection</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
