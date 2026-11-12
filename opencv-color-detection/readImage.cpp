@@ -34,11 +34,22 @@ bool readImage::getMat(std::string path)
 		return false;
 	}
 	std::cout << "after:" << cv::countNonZero(mask)<<std::endl;
-	double area = cv::contourArea(contours[0]);
-	std::cout << area << std::endl;
 	cv::Mat result = target.clone();
-	cv::drawContours(result, contours, -1, cv::Scalar(0, 0, 255));
-
+	int count = 0;
+	for(int i=0;i<contours.size();++i)
+	{
+		double area = cv::contourArea(contours[0]);
+		if (area < 50)
+		{
+			continue;
+		}
+		cv::drawContours(result, contours, i, cv::Scalar(0, 0, 255));
+		cv::Rect boundRec = boundingRect(contours[i]);
+		cv::rectangle(result, boundRec, cv::Scalar(70, 70, 70));
+		cv::putText(result, std::to_string(100), cv::Point(boundRec.x, boundRec.y), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 0, 0));\
+			++count;
+	}
+	std::cout << "total:" << count << std::endl;
 	std::cout << contours.size() << std::endl;
 	cv::imshow("contours", result);
 	cv::imshow("origin", target);
