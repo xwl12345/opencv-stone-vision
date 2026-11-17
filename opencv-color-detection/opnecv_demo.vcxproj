@@ -159,11 +159,14 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="configLoader.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="readImage.cpp" />
+    <ClCompile Include="colorDetector.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="readImage.h" />
+    <ClInclude Include="configLoader.h" />
+    <ClInclude Include="detectorParams.h" />
+    <ClInclude Include="colorDetector.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

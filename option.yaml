@@ -1,0 +1,11 @@
+%YAML:1.0
+---
+user:
+   name: xwl1
+   password: 111
+hsv:
+   lower: [ 30., 50., 0., 0. ]
+   upper: [ 80., 255., 255., 0. ]
+kernal:
+   openKernal: 3
+   closeKernal: 5
