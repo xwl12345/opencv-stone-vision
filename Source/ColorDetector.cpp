@@ -21,45 +21,75 @@ void onMouse(int event, int x, int y,int flag,void* userdata)
 	}
 
 }
-ColorDetector::ColorDetector(const DetectorParams& params):m_params(params)
+void  OnTrackBar(int pos, void* userdata)
 {
+	ColorDetector* self = static_cast<ColorDetector*>(userdata);
+	if (self == nullptr)
+	{
+		return;
+	}
+	self->update();
+}
+ColorDetector::ColorDetector(const DetectorParams& params) :m_params(params)
+, m_target(cv::imread(m_params.imagePath))
+, m_openKernel(cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(m_params.openKernelSize, m_params.openKernelSize)))
+, m_closeKernel(cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(m_params.closeKernelSize, m_params.closeKernelSize)))
+, m_lowerH(static_cast<int>(m_params.hsvLower[0]))
+, m_upperH(static_cast<int>(m_params.hsvUpper[0]))
+{
+
 }
 
 bool ColorDetector::getMat()
 {
 	//读取图片
-	cv::Mat target = cv::imread(m_params.imagePath);
-	if (target.empty())
+	if (m_target.empty())
 	{
 		std::cout << "读取失败" << std::endl;
 		return false;
 	}
 	//BGR转化为HSV
-	cv::Mat hsv;
-	cv::cvtColor(target, hsv, cv::COLOR_BGR2HSV);
-	//获取掩膜
+	cv::cvtColor(m_target, m_hsv, cv::COLOR_BGR2HSV);
+
+	cv::imshow("origin", m_target);
+
+	cv::namedWindow("mask");
+	cv::namedWindow("contour");
+	update();
+	cv::createTrackbar("lowerH trackbar", "mask",&m_lowerH, 179, OnTrackBar,this);
+	cv::createTrackbar("upperH trackbar", "mask", &m_upperH, 179, OnTrackBar, this);
+
+	cv::setMouseCallback("origin", onMouse, &m_target);
+
+	cv::waitKey(0);
+	cv::destroyAllWindows();
+	return true;
+}
+
+bool ColorDetector::update()
+{
 	cv::Mat mask;
-	cv::inRange(hsv, m_params.hsvLower, m_params.hsvUpper,mask);
+	cv::inRange(m_hsv, cv::Scalar(m_lowerH, 5, 5), cv::Scalar(m_upperH,255,255),mask);
 
-	std::cout << "before: " << cv::countNonZero(mask)<<std::endl;
-	//创建3*3椭圆核来做开运算去噪点
-	cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(m_params.openKernelSize,m_params.openKernelSize));
-	cv::morphologyEx(mask, mask, cv::MORPH_OPEN, kernel);
-
-	cv::Mat closeKernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(m_params.closeKernelSize,m_params.closeKernelSize));
-	cv::morphologyEx(mask, mask, cv::MORPH_CLOSE, closeKernel);
-	//获取轮廓
+	//3*3椭圆核来做开运算去噪点
+	cv::morphologyEx(mask, mask, cv::MORPH_OPEN, m_openKernel);
+	//5*5
+	cv::morphologyEx(mask, mask, cv::MORPH_CLOSE, m_closeKernel);
+	//获取轮廓椭圆核来做闭运算
 	std::vector<std::vector<cv::Point>> contours;
+
+	cv::imshow("mask", mask);
+
+
 	cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 	if (contours.empty())
 	{
-		std::cout << "fail to get contours" << std::endl; 
+		std::cout << "fail to get contours" << std::endl;
 		return false;
 	}
-	std::cout << "after:" << cv::countNonZero(mask)<<std::endl;
-	cv::Mat result = target.clone();
+	cv::Mat result = m_target.clone();
 	int count = 0;
-	for(int i=0;i<contours.size();++i)
+	for (int i = 0;i < contours.size();++i)
 	{
 		double area = cv::contourArea(contours[i]);
 		if (area < m_params.minContourArea)
@@ -70,16 +100,8 @@ bool ColorDetector::getMat()
 		cv::Rect boundRec = boundingRect(contours[i]);
 		cv::rectangle(result, boundRec, cv::Scalar(70, 70, 70));
 		cv::putText(result, std::to_string(count), cv::Point(boundRec.x, boundRec.y), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 255, 255));
-			++count;
+		++count;
 	}
-	std::cout << "total:" << count << std::endl;
-	std::cout << contours.size() << std::endl;
-	cv::imshow("contours", result);
-	cv::imshow("origin", target);
-	cv::imshow("mask", mask);
-	cv::setMouseCallback("origin", onMouse, &target);
-
-	cv::waitKey(0);
-	cv::destroyAllWindows();
+	cv::imshow("contour", result);
 	return true;
 }
