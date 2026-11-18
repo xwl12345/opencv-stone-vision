@@ -1,36 +1,59 @@
-#include "readImage.h"
+#include "ColorDetector.h"
 
-bool readImage::getMat(std::string path)
+void onMouse(int event, int x, int y,int flag,void* userdata)
+{
+	if (event != cv::EVENT_LBUTTONDOWN)
+	{
+		return;
+	}
+
+	cv::Mat* hsvPtr = static_cast<cv::Mat*> (userdata);
+	{
+		if (hsvPtr == nullptr)
+		{
+			return;
+		}
+		cv::Vec3b hsvValue=hsvPtr->at<cv::Vec3b>(y, x);
+		for (int i = 0;i < 3;++i)
+		{
+			std::cout << (int)hsvValue[i] << std::endl;
+		}
+	}
+
+}
+ColorDetector::ColorDetector(const DetectorParams& params):m_params(params)
+{
+}
+
+bool ColorDetector::getMat()
 {
 	//读取图片
-	cv::Mat target = cv::imread(path);
+	cv::Mat target = cv::imread(m_params.imagePath);
 	if (target.empty())
 	{
 		std::cout << "读取失败" << std::endl;
 		return false;
 	}
-	std::cout << target.rows <<std::endl;
-	std::cout << target.cols << std::endl;
 	//BGR转化为HSV
 	cv::Mat hsv;
 	cv::cvtColor(target, hsv, cv::COLOR_BGR2HSV);
 	//获取掩膜
 	cv::Mat mask;
-	cv::inRange(hsv,cv::Scalar(35, 50, 30), cv::Scalar(85,255,255),mask);
+	cv::inRange(hsv, m_params.hsvLower, m_params.hsvUpper,mask);
 
 	std::cout << "before: " << cv::countNonZero(mask)<<std::endl;
 	//创建3*3椭圆核来做开运算去噪点
-	cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
+	cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(m_params.openKernelSize,m_params.openKernelSize));
 	cv::morphologyEx(mask, mask, cv::MORPH_OPEN, kernel);
 
-	cv::Mat closeKernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
+	cv::Mat closeKernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(m_params.closeKernelSize,m_params.closeKernelSize));
 	cv::morphologyEx(mask, mask, cv::MORPH_CLOSE, closeKernel);
 	//获取轮廓
 	std::vector<std::vector<cv::Point>> contours;
 	cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 	if (contours.empty())
 	{
-		//std::cout << "未得到轮廓" << std::endl; 
+		std::cout << "fail to get contours" << std::endl; 
 		return false;
 	}
 	std::cout << "after:" << cv::countNonZero(mask)<<std::endl;
@@ -39,7 +62,7 @@ bool readImage::getMat(std::string path)
 	for(int i=0;i<contours.size();++i)
 	{
 		double area = cv::contourArea(contours[i]);
-		if (area < 50)
+		if (area < m_params.minContourArea)
 		{
 			continue;
 		}
@@ -54,59 +77,9 @@ bool readImage::getMat(std::string path)
 	cv::imshow("contours", result);
 	cv::imshow("origin", target);
 	cv::imshow("mask", mask);
+	cv::setMouseCallback("origin", onMouse, &target);
+
 	cv::waitKey(0);
 	cv::destroyAllWindows();
-	return true;
-}
-
-std::string readImage::getName(std::string path)
-{
-	try
-	{
-		cv::FileStorage fs;
-		bool opened = fs.open(path, cv::FileStorage::READ);
-		if (!opened)
-		{
-			std::cout << "fail to open the file";
-			return " ";
-		}
-		std::string name;
-		name = "default";
-		cv::FileNode fn = fs["user"]["name"];
-		if (!fn.empty() && fn.isString())
-		{
-			fn >> name;
-		}
-
-		return name;
-	}
-	catch (const cv::Exception& e)
-	{
-		std::cout << "the file is error" <<e.what()<< std::endl;
-		return "error";
-	}
-}
-
-bool readImage::exportYaml(std::string path)
-{
-	cv::FileStorage fs;
-	bool flag=fs.open(path, cv::FileStorage::WRITE);
-	if (!flag)
-	{
-		return false;
-	}
-	fs <<"user"<<"{"
-		<< "name" << "xwl1"
-		<<"password"<<111
-		<<"}"
-		<< "hsv" << "{"
-		<< "lower" << cv::Scalar(30, 50, 0)
-		<< "upper" << cv::Scalar(80, 255, 255)
-		<< "}"
-		<< "kernal" << "{"
-		<< "openKernal" << 3
-		<< "closeKernal" << 5
-		<< "}";
-
 	return true;
 }

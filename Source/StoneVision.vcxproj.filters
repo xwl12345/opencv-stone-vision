@@ -18,21 +18,21 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="colorDetector.cpp">
+    <ClCompile Include="ColorDetector.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="configLoader.cpp">
+    <ClCompile Include="ConfigLoader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="colorDetector.h">
+    <ClInclude Include="ColorDetector.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="detectorParams.h">
+    <ClInclude Include="DetectorParams.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="configLoader.h">
+    <ClInclude Include="ConfigLoader.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
