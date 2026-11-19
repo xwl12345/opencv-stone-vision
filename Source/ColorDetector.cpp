@@ -23,8 +23,13 @@ void onMouse(int event, int x, int y,int flag,void* userdata)
 }
 void  OnTrackBar(int pos, void* userdata)
 {
+	
 	ColorDetector* self = static_cast<ColorDetector*>(userdata);
 	if (self == nullptr)
+	{
+		return;
+	}
+	if (self->isReady() == false)
 	{
 		return;
 	}
@@ -34,8 +39,7 @@ ColorDetector::ColorDetector(const DetectorParams& params) :m_params(params)
 , m_target(cv::imread(m_params.imagePath))
 , m_openKernel(cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(m_params.openKernelSize, m_params.openKernelSize)))
 , m_closeKernel(cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(m_params.closeKernelSize, m_params.closeKernelSize)))
-, m_lowerH(static_cast<int>(m_params.hsvLower[0]))
-, m_upperH(static_cast<int>(m_params.hsvUpper[0]))
+,m_ready(false)
 {
 
 }
@@ -55,10 +59,12 @@ bool ColorDetector::getMat()
 
 	cv::namedWindow("mask");
 	cv::namedWindow("contour");
+	cv::createTrackbar("lowerH", "mask",0, 179, OnTrackBar,this);
+	cv::setTrackbarPos("lowerH", "mask", static_cast<int>(m_params.hsvLower[0]));
+	cv::createTrackbar("upperH", "mask", 0, 179, OnTrackBar, this);
+	cv::setTrackbarPos("upperH", "mask", static_cast<int>(m_params.hsvUpper[0]));
 	update();
-	cv::createTrackbar("lowerH trackbar", "mask",&m_lowerH, 179, OnTrackBar,this);
-	cv::createTrackbar("upperH trackbar", "mask", &m_upperH, 179, OnTrackBar, this);
-
+	m_ready = true;
 	cv::setMouseCallback("origin", onMouse, &m_target);
 
 	cv::waitKey(0);
@@ -67,10 +73,14 @@ bool ColorDetector::getMat()
 }
 
 bool ColorDetector::update()
-{
+{	
 	cv::Mat mask;
-	cv::inRange(m_hsv, cv::Scalar(m_lowerH, 5, 5), cv::Scalar(m_upperH,255,255),mask);
-
+	int lowerH = cv::getTrackbarPos("lowerH","mask");
+	int upperH = cv::getTrackbarPos("upperH", "mask");
+	int64_t t1 = cv::getTickCount();
+	cv::inRange(m_hsv, cv::Scalar(lowerH, 5, 5), cv::Scalar(upperH,255,255),mask);
+	int64_t t2 = cv::getTickCount();
+	std::cout << (t2 - t1) * 1000 / cv::getTickFrequency() << std::endl;
 	//3*3椭圆核来做开运算去噪点
 	cv::morphologyEx(mask, mask, cv::MORPH_OPEN, m_openKernel);
 	//5*5
@@ -104,4 +114,9 @@ bool ColorDetector::update()
 	}
 	cv::imshow("contour", result);
 	return true;
+}
+
+ bool ColorDetector::isReady() const
+{
+	return m_ready;
 }
