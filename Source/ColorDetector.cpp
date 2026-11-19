@@ -116,6 +116,11 @@ bool ColorDetector::update()
 		cv::polylines(result, approxContour, true, cv::Scalar(100, 0, 200), 2);
 
 		cv::RotatedRect rotRect=cv::minAreaRect(contours[i]);
+		m_params.pixelScale = m_params.referenceMm/rotRect.size.width  ;
+		double realWidth = rotRect.size.width * m_params.pixelScale;
+		double realHeight = rotRect.size.height * m_params.pixelScale;
+		std::cout << "real width:" << realWidth << std::endl;
+		std::cout << "real height:" << realHeight << std::endl;
 		std::cout << "angle: " << rotRect.angle << std::endl;
 		std::cout << "center: " << rotRect.center << std::endl;
 		std::cout << "size: " << rotRect.size << std::endl;

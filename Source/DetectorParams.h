@@ -8,4 +8,6 @@ struct DetectorParams
 	int openKernelSize = 3;
 	int closeKernelSize = 5;
 	double minContourArea = 50.00;
+	double referenceMm = 100.0;   // 假设的参照物真实尺寸（mm）
+	double pixelScale = 0.0;      // 算出来的比例：mm/像素
 };

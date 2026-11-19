@@ -17,5 +17,7 @@ private:
 	cv::Mat m_hsv;
 	cv::Mat m_openKernel;
 	cv::Mat m_closeKernel;
-	bool m_ready;
+	bool m_ready; //界面初始化标志位
+	
+
 };
