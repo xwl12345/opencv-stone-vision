@@ -9,7 +9,8 @@ public:
 	explicit ColorDetector(const DetectorParams& params);
 	bool getMat();
 	bool update();
-	 bool isReady() const;
+	bool rotate(cv::InputArray inputSrc,cv::Mat& outPut, cv::Point2f center, double angle, double scale);
+	bool isReady() const;
 private:
 	DetectorParams m_params;
 	cv::Mat m_target;

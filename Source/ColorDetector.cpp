@@ -80,7 +80,7 @@ bool ColorDetector::update()
 	int64_t t1 = cv::getTickCount();
 	cv::inRange(m_hsv, cv::Scalar(lowerH, 5, 5), cv::Scalar(upperH,255,255),mask);
 	int64_t t2 = cv::getTickCount();
-	std::cout << (t2 - t1) * 1000 / cv::getTickFrequency() << std::endl;
+	//std::cout << (t2 - t1) * 1000 / cv::getTickFrequency() << std::endl;
 	//3*3椭圆核来做开运算去噪点
 	cv::morphologyEx(mask, mask, cv::MORPH_OPEN, m_openKernel);
 	//5*5
@@ -106,13 +106,46 @@ bool ColorDetector::update()
 		{
 			continue;
 		}
-		cv::drawContours(result, contours, i, cv::Scalar(0, 0, 255));
+		double length = cv::arcLength(contours[i], true);
+		double epsilon = length * 0.01;
+		std::vector<cv::Point> approxContour;
+		cv::approxPolyDP(contours[i], approxContour, epsilon, true);
+		std::cout << approxContour.size() << std::endl;
+
+		cv::drawContours(result, contours,i, cv::Scalar(0, 0, 255));
+		cv::polylines(result, approxContour, true, cv::Scalar(100, 0, 200), 2);
+
+		cv::RotatedRect rotRect=cv::minAreaRect(contours[i]);
+		std::cout << "angle: " << rotRect.angle << std::endl;
+		std::cout << "center: " << rotRect.center << std::endl;
+		std::cout << "size: " << rotRect.size << std::endl;
+		cv::Mat boxMat;
+		cv::boxPoints(rotRect, boxMat);
+		cv::Mat boxInt;
+		boxMat.convertTo(boxInt, CV_32S);
+		cv::polylines(result, boxInt, true, cv::Scalar(0, 255, 0), 2);
+		cv::circle(result, rotRect.center, 1, cv::Scalar(0, 0, 255));
+		cv::Mat rotateImg = result.clone();
+		rotate(result, rotateImg, rotRect.center, rotRect.angle, 1.0);
+		cv::imshow("rotate", rotateImg);
+
 		cv::Rect boundRec = boundingRect(contours[i]);
 		cv::rectangle(result, boundRec, cv::Scalar(70, 70, 70));
 		cv::putText(result, std::to_string(count), cv::Point(boundRec.x, boundRec.y), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 255, 255));
 		++count;
 	}
 	cv::imshow("contour", result);
+
+	
+
+	return true;
+}
+
+bool ColorDetector::rotate(cv::InputArray inputSrc,cv::Mat& outPut, cv::Point2f center, double angle, double scale)
+{
+	
+	cv::Mat rotMat=cv::getRotationMatrix2D(center, angle, scale);
+	cv::warpAffine(inputSrc, outPut, rotMat, m_target.size());
 	return true;
 }
 
