@@ -94,6 +94,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="DepthCameraControl.h" />
+    <ClInclude Include="DepthFrame.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DepthCameraControl.cpp" />
