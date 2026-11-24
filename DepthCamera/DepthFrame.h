@@ -1,10 +1,11 @@
-#pragma once
+﻿#pragma once
 #include <cstdint>
 #include <vector>
 
+namespace muyan::depthcam 
+{
 
-
-    struct DepthFrameData
+    struct DepthFrameData 
     {
         int      width = 0;
         int      height = 0;
@@ -15,3 +16,4 @@
         bool IsValid() const { return width > 0 && height > 0 && depth.size() == size_t(width) * height; }
     };
 
+} // namespace muyan::depthcam
