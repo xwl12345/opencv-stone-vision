@@ -51,6 +51,7 @@ struct DepthCameraControl::Impl
 	void SetState(DepthCameraState s);
 	void SetError(const std::string& msg);
 	void RegisterEventCallback();
+	void RegisterFrameCallback();
 };
 
 muyan::depthcam::DepthCameraControl::DepthCameraControl()
@@ -119,7 +120,7 @@ bool muyan::depthcam::DepthCameraControl::OpenBySerial(const std::string serialN
 	impl->opened = true;
 	impl->SetState(DepthCameraState::Closed);
 	impl->RegisterEventCallback();
-
+	impl->RegisterFrameCallback();
 	return true;
 }
 
@@ -134,6 +135,7 @@ bool muyan::depthcam::DepthCameraControl::OpenByIp(const std::string ipAddress)
 	impl->opened = true;
 	impl->SetState(DepthCameraState::Closed);
 	impl->RegisterEventCallback();
+	impl->RegisterFrameCallback();
 	return true;
 }
 
@@ -157,7 +159,7 @@ bool muyan::depthcam::DepthCameraControl::Connect()
 	auto st = impl->camera.Connect();
 	if (!st.IsSuccess())
 	{
-		if (IsConnected())
+		if (st.code() == vcamera::CameraApiStatusCode::DeviceBusy)
 		{
 			impl->SetState(DepthCameraState::Occupied);
 			impl->SetError(st.message());
@@ -173,6 +175,7 @@ bool muyan::depthcam::DepthCameraControl::Connect()
 		{
 			impl->SetState(DepthCameraState::Error);
 			impl->SetError(st.message());
+			return false;
 		}
 		impl->SetState(DepthCameraState::Error);
 		impl->SetError(st.message());
@@ -208,7 +211,7 @@ bool muyan::depthcam::DepthCameraControl::Disconnect()
 
 bool muyan::depthcam::DepthCameraControl::IsConnected() const
 {
-	if (impl->state == DepthCameraState::Opened || impl->state == DepthCameraState::Capturing)
+	if (State() == DepthCameraState::Opened || State() == DepthCameraState::Capturing)
 	{
 		return true;
 	}
@@ -217,6 +220,7 @@ bool muyan::depthcam::DepthCameraControl::IsConnected() const
 
 DepthCameraState muyan::depthcam::DepthCameraControl::State() const
 {
+	std::lock_guard<std::mutex> lock(impl->mtx);
 	return impl->state;
 }
 
@@ -230,9 +234,10 @@ bool muyan::depthcam::DepthCameraControl::EnableAutoReconnect()
 {
 	if (impl->opened && !IsConnected())
 	{
-		auto st=impl->camera.EnableReconnectWhenOffline();
-		if(!st.IsSuccess())
+		auto st = impl->camera.EnableReconnectWhenOffline();
+		if (!st.IsSuccess())
 		{
+			impl->SetError(st.message());
 			return false;
 		}
 		return true;
@@ -244,12 +249,13 @@ bool muyan::depthcam::DepthCameraControl::EnableAutoReconnect(int maxAttempts)
 {
 	if (impl->opened && !IsConnected())
 	{
-		if(maxAttempts>0)
+		if (maxAttempts > 0)
 		{
 			uint32_t maxTime = maxAttempts;
-			auto st=impl->camera.EnableReconnectWhenOfflineWithMaxAttempts(maxTime);
+			auto st = impl->camera.EnableReconnectWhenOfflineWithMaxAttempts(maxTime);
 			if (!st.IsSuccess())
 			{
+				impl->SetError(st.message());
 				return false;
 			}
 			return true;
@@ -265,9 +271,10 @@ bool muyan::depthcam::DepthCameraControl::EnableAutoReconnect(double maxSeconds)
 	{
 		if (maxSeconds > 0)
 		{
-			auto st=impl->camera.EnableReconnectWhenOfflineWithTimeoutSeconds(maxSeconds);
+			auto st = impl->camera.EnableReconnectWhenOfflineWithTimeoutSeconds(maxSeconds);
 			if (!st.IsSuccess())
 			{
+				impl->SetError(st.message());
 				return false;
 			}
 			return true;
@@ -280,7 +287,7 @@ bool muyan::depthcam::DepthCameraControl::DisableAutoReconnect()
 {
 	if (impl->opened && !IsConnected())
 	{
-		auto ret=impl->camera.DisableReconnectWhenOffline();
+		auto ret = impl->camera.DisableReconnectWhenOffline();
 		if (ret.IsSuccess())
 		{
 			return true;
@@ -291,15 +298,17 @@ bool muyan::depthcam::DepthCameraControl::DisableAutoReconnect()
 			return false;
 		}
 	}
+	return false;
 }
 
 bool muyan::depthcam::DepthCameraControl::SetRecoverCaptureAfterReconnect(bool enable)
 {
 	if (impl->opened && !IsConnected())
 	{
-		auto st=impl->camera.SetReconnectCaptureRecoveryEnabled(enable);
+		auto st = impl->camera.SetReconnectCaptureRecoveryEnabled(enable);
 		if (!st.IsSuccess())
 		{
+			impl->SetError(st.message());
 			return false;
 		}
 		return true;
@@ -309,17 +318,47 @@ bool muyan::depthcam::DepthCameraControl::SetRecoverCaptureAfterReconnect(bool e
 
 bool muyan::depthcam::DepthCameraControl::StartCapture()
 {
-	return false;
+	if (!IsConnected())
+	{
+		impl->SetError("未连接，请先connect");
+		return false;
+	}
+	auto st = impl->camera.SetSensorEnabled(vcamera::SensorType::Depth, true);
+	if (!st.IsSuccess())
+	{
+		impl->SetError(st.message());
+		return false;
+	}
+	auto ret = impl->camera.StartCapture();
+	if (!ret.IsSuccess())
+	{
+		impl->SetError(ret.message());
+		return false;
+	}
+	impl->SetState(DepthCameraState::Capturing);
+	return true;
 }
 
 bool muyan::depthcam::DepthCameraControl::StopCapture()
 {
-	return false;
+	if (State() != DepthCameraState::Capturing)
+	{
+		impl->SetError("未在采集");
+		return false;
+	}
+	auto st = impl->camera.StopCapture();
+	if (!st.IsSuccess())
+	{
+		impl->SetError(st.message());
+		return false;
+	}
+	impl->SetState(DepthCameraState::Opened);
+	return true;
 }
 
 bool muyan::depthcam::DepthCameraControl::IsCapturing() const
 {
-	return false;
+	return (State()==DepthCameraState::Capturing);
 }
 
 bool muyan::depthcam::DepthCameraControl::FireSoftwareTrigger()
@@ -338,7 +377,7 @@ void muyan::depthcam::DepthCameraControl::SetFrameCallback(std::function<void(co
 
 std::string muyan::depthcam::DepthCameraControl::LastError() const
 {
-
+	std::lock_guard<std::mutex> lock(impl->mtx);
 	return impl->lastError;
 }
 
@@ -350,6 +389,7 @@ void DepthCameraControl::Impl::SetState(DepthCameraState s)
 
 void DepthCameraControl::Impl::SetError(const std::string& msg)
 {
+	std::lock_guard<std::mutex> lock(mtx);
 	this->lastError = msg;
 }
 
@@ -365,11 +405,12 @@ void DepthCameraControl::Impl::RegisterEventCallback()
 		case vcamera::CameraEventCode::Opened:
 			self->SetState(DepthCameraState::Opened);
 			break;
-			/*	case vcamera::CameraEventCode::Started:
-					self->SetState(DepthCameraState::);*/
+			case vcamera::CameraEventCode::Started:
+					self->SetState(DepthCameraState::Capturing);
 			break;
-			/*case vcamera::CameraEventCode::Stopped:
-				break;*/
+			case vcamera::CameraEventCode::Stopped:
+				self->SetState(DepthCameraState::Opened);
+				break;
 		case vcamera::CameraEventCode::Offlined:
 			self->SetState(DepthCameraState::Offlined);
 			break;
@@ -380,11 +421,24 @@ void DepthCameraControl::Impl::RegisterEventCallback()
 			self->SetState(DepthCameraState::Reconnecting);
 			break;
 		case vcamera::CameraEventCode::ReconnectSuccess:
-			self->SetState(DepthCameraState::ReconnectSuccess);
+			self->SetState(DepthCameraState::Opened);
 			break;
 		default:
 			break;
 		}
 		});
 	
+}
+
+void DepthCameraControl::Impl::RegisterFrameCallback()
+{
+	camera.RegisterFrameSetCallback([](const vcamera::FrameSet& fs)
+		{
+			auto img = fs.GetImage(vcamera::SensorType::Depth);
+			if (!img.IsValid()) return;          // 先判 IsValid 再碰 data()
+			// 打印不保存指针所以天然安全；后面在这里换深拷贝
+			std::cout << "[帧] " << img.width() << "x" << img.height()
+				<< " fmt=" << int(img.pixel_format())
+				<< " ts=" << img.time_stamp() << std::endl;
+		});
 }

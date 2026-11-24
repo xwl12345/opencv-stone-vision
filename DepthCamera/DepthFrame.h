@@ -16,4 +16,4 @@ namespace muyan::depthcam
         bool IsValid() const { return width > 0 && height > 0 && depth.size() == size_t(width) * height; }
     };
 
-} // namespace muyan::depthcam
+} 
