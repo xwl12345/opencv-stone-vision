@@ -101,7 +101,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DepthCameraControl.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="test.cpp" />
     <ClCompile Include="SdkSession.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -5,7 +5,7 @@
 #include "SdkSession.h"
 #include <iostream>
 #include <mutex>
-
+#include <functional>
 namespace
 {
 	std::mutex    s_sdkErrMtx;
@@ -45,13 +45,18 @@ struct DepthCameraControl::Impl
 
 	DepthCameraState state = DepthCameraState::Unknown;
 	std::string lastError;
+	DepthFrameData latest;
+	vcamera::CalibInfo calib{};
 
 	mutable std::mutex mtx;
 
+	std::function<void(const DepthFrameData&)> userCb;
+	void FetchCalib();
 	void SetState(DepthCameraState s);
 	void SetError(const std::string& msg);
 	void RegisterEventCallback();
 	void RegisterFrameCallback();
+	
 };
 
 muyan::depthcam::DepthCameraControl::DepthCameraControl()
@@ -187,6 +192,7 @@ bool muyan::depthcam::DepthCameraControl::Connect()
 		impl->camera.GetCameraInfo(info);
 		impl->model = info.model;
 		impl->SetState(DepthCameraState::Opened);
+		impl->FetchCalib();
 		return true;
 
 	}
@@ -368,17 +374,47 @@ bool muyan::depthcam::DepthCameraControl::FireSoftwareTrigger()
 
 bool muyan::depthcam::DepthCameraControl::GetLastDepth(DepthFrameData& out) const
 {
-	return false;
+	if (!IsConnected())
+	{
+		impl->SetError("未连接");
+		return false;
+	}
+	bool ok = false;
+	{
+		std::lock_guard<std::mutex> lock(impl->mtx);
+		if (impl->latest.IsValid())
+		{
+			out = impl->latest;
+			ok = true;
+		}
+	}
+	if (!ok)
+	{
+		impl->SetError("尚无有效帧");
+	}
+	return ok;
+	
 }
 
-void muyan::depthcam::DepthCameraControl::SetFrameCallback(std::function<void(const DepthFrameData&)> cb)
+void muyan::depthcam::DepthCameraControl::SetFrameCallback(std::function<void(const DepthFrameData&) > cb)
 {
+	std::lock_guard<std::mutex> lock(impl->mtx);
+	impl->userCb = std::move(cb);
 }
 
 std::string muyan::depthcam::DepthCameraControl::LastError() const
 {
 	std::lock_guard<std::mutex> lock(impl->mtx);
 	return impl->lastError;
+}
+
+void DepthCameraControl::Impl::FetchCalib()
+{
+	auto st=camera.GetFactoryCalibInfo(vcamera::SensorType::Depth, calib);
+	if (!st.IsSuccess())
+	{
+		SetError(st.message());
+	}
 }
 
 void DepthCameraControl::Impl::SetState(DepthCameraState s)
@@ -432,13 +468,38 @@ void DepthCameraControl::Impl::RegisterEventCallback()
 
 void DepthCameraControl::Impl::RegisterFrameCallback()
 {
-	camera.RegisterFrameSetCallback([](const vcamera::FrameSet& fs)
+	Impl* self = this;
+	camera.RegisterFrameSetCallback([self](const vcamera::FrameSet& fs)
 		{
 			auto img = fs.GetImage(vcamera::SensorType::Depth);
 			if (!img.IsValid()) return;          // 先判 IsValid 再碰 data()
-			// 打印不保存指针所以天然安全；后面在这里换深拷贝
-			std::cout << "[帧] " << img.width() << "x" << img.height()
-				<< " fmt=" << int(img.pixel_format())
-				<< " ts=" << img.time_stamp() << std::endl;
+			if (img.pixel_format() != vcamera::PixelFormat::DEPTH16)
+			{
+				self->SetError("非DEPTH16格式(" + std::to_string(int(img.pixel_format())) + ")");
+				
+				return;
+			}
+			const uint16_t* ptr = reinterpret_cast<const uint16_t*>(img.data());
+			DepthFrameData frame;
+			frame.width = img.width();
+			frame.height = img.height();
+			frame.scaleUnit = float(img.scale_unit());
+			frame.timestampNs = img.time_stamp();
+			frame.depth.assign(ptr, ptr + static_cast<size_t>(frame.width) * frame.height);
+
+			DepthFrameData temp;
+			std::function<void(const DepthFrameData&)> cb;
+			{
+				std::lock_guard<std::mutex> lock(self->mtx);
+				self->latest = std::move(frame);
+				cb = self->userCb;
+				temp = self->latest;
+			}
+			if(cb)
+			{
+				cb(temp);
+			}
 		});
+	
+
 }

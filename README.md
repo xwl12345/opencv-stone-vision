@@ -26,8 +26,9 @@
 opencv-stone-vision.slnx
 option.yaml             检测参数与测试图片路径
 images/                 测试图片
-Source/                 StoneVision：主程序、颜色检测、配置加载
-DepthCamera/            相机 SDK 工程（当前仅打印 SDK 版本，验证集成）
+Source/
+  StoneVision/          StoneVision：主程序、颜色检测、配置加载
+  DepthCamera/          相机 SDK 工程（封装 DepthCameraControl，test.cpp 为入口）
 ThirdParty/             第三方库（不入库，需自行放置，见下节）
 Int/ Output/            构建中间目录与输出（不入库）
 ```
@@ -77,5 +78,5 @@ dll 不在输出目录里，需要从 `ThirdParty` 拷到 exe 所在目录（`Ou
 
 `option.yaml` 保存检测参数：`imagePath`（测试图片路径）、`hsvLower` / `hsvUpper`（HSV 阈值）、`openKernelSize` / `closeKernelSize`（开闭运算核大小）、`minContourArea`（最小轮廓面积）。
 
-`option.yaml` 里的 `imagePath` 和 `Source\main.cpp` 里的 yaml 路径目前都是绝对路径，换机器或换目录需要改成新路径。
+`option.yaml` 里的 `imagePath` 和 `Source/StoneVision/main.cpp` 里的 yaml 路径目前都是绝对路径，换机器或换目录需要改成新路径。
 
