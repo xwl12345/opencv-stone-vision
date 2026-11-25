@@ -27,11 +27,15 @@ opencv-stone-vision.slnx
 option.yaml             检测参数与测试图片路径
 images/                 测试图片
 Source/
-  StoneVision/          StoneVision：主程序、颜色检测、配置加载
-  DepthCamera/          相机 SDK 工程（封装 DepthCameraControl，test.cpp 为入口）
+  StoneVision/          StoneVision：主程序、颜色检测、配置加载；CameraSmokeTest 为相机封装自测
+  DepthCamera/          相机 SDK 封装，编译成动态库 DepthCamera.dll
+  Include/DepthCamera/  DepthCameraExport.h，导出宏 DEPTH_CAMERA_API 的定义
 ThirdParty/             第三方库（不入库，需自行放置，见下节）
 Int/ Output/            构建中间目录与输出（不入库）
+lib/                    动态库的导入库（.lib），构建产物，不入库
 ```
+
+`DepthCamera` 的封装类不带命名空间，`DepthCameraControl`、`DepthFrameData`、`SdkSession` 都直接在全局作用域，用的时候不用加前缀。
 
 ## 第三方库准备
 

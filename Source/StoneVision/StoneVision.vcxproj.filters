@@ -24,6 +24,9 @@
     <ClCompile Include="ConfigLoader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="CameraSmokeTest.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ColorDetector.h">
@@ -33,6 +36,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="ConfigLoader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CameraSmokeTest.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

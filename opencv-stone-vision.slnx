@@ -3,5 +3,7 @@
     <Platform Name="x64" />
   </Configurations>
   <Project Path="Source/DepthCamera/DepthCamera.vcxproj" Id="23cd7e31-5261-4508-911f-3fa743acc12f" />
-  <Project Path="Source/StoneVision/StoneVision.vcxproj" Id="533df24b-c1b1-4109-90ed-89cbdce40f28" />
+  <Project Path="Source/StoneVision/StoneVision.vcxproj" Id="533df24b-c1b1-4109-90ed-89cbdce40f28">
+    <BuildDependency Project="Source/DepthCamera/DepthCamera.vcxproj" />
+  </Project>
 </Solution>

@@ -12,7 +12,6 @@ namespace
 	std::string   s_sdkLastError;   // 进程级静态操作的错误
 }
 
-using namespace muyan::depthcam;
 //int main() 
 //{
 //    if (!SdkSession::Acquire(true))
@@ -59,14 +58,14 @@ struct DepthCameraControl::Impl
 	
 };
 
-muyan::depthcam::DepthCameraControl::DepthCameraControl()
+DepthCameraControl::DepthCameraControl()
 {
 	impl = std::make_unique<Impl>();
 }
 
-muyan::depthcam::DepthCameraControl::~DepthCameraControl() = default;
+DepthCameraControl::~DepthCameraControl() = default;
 
-bool muyan::depthcam::DepthCameraControl::InitSdk(bool useDirectCall)
+bool DepthCameraControl::InitSdk(bool useDirectCall)
 {
 	bool initFlag =SdkSession::Acquire(useDirectCall);
 	if (!initFlag)
@@ -78,13 +77,13 @@ bool muyan::depthcam::DepthCameraControl::InitSdk(bool useDirectCall)
 	return true;
 }
 
-void muyan::depthcam::DepthCameraControl::ShutDownSdk()
+void DepthCameraControl::ShutDownSdk()
 {
 	SdkSession::Release();
 	return;
 }
 
-std::vector<DepthCameraDesc> muyan::depthcam::DepthCameraControl::DiscoverCameras()
+std::vector<DepthCameraDesc> DepthCameraControl::DiscoverCameras()
 {
 	if (!SdkSession::IsHeld())
 	{
@@ -107,13 +106,13 @@ std::vector<DepthCameraDesc> muyan::depthcam::DepthCameraControl::DiscoverCamera
 	return DiscoveredVec;
 }
 
-std::string muyan::depthcam::DepthCameraControl::SdkLastError()
+std::string DepthCameraControl::SdkLastError()
 {
 	std::lock_guard<std::mutex> lock(s_sdkErrMtx);
 	return s_sdkLastError;
 }
 
-bool muyan::depthcam::DepthCameraControl::OpenBySerial(const std::string serialNumber)
+bool DepthCameraControl::OpenBySerial(const std::string serialNumber)
 {
 	if (!SdkSession::IsHeld())//后面可以看看序列号格式改判断条件
 	{
@@ -129,7 +128,7 @@ bool muyan::depthcam::DepthCameraControl::OpenBySerial(const std::string serialN
 	return true;
 }
 
-bool muyan::depthcam::DepthCameraControl::OpenByIp(const std::string ipAddress)
+bool DepthCameraControl::OpenByIp(const std::string ipAddress)
 {
 	if (!SdkSession::IsHeld())
 	{
@@ -144,7 +143,7 @@ bool muyan::depthcam::DepthCameraControl::OpenByIp(const std::string ipAddress)
 	return true;
 }
 
-bool muyan::depthcam::DepthCameraControl::Connect()
+bool DepthCameraControl::Connect()
 {
 	if (!SdkSession::IsHeld())
 	{
@@ -198,7 +197,7 @@ bool muyan::depthcam::DepthCameraControl::Connect()
 	}
 }
 
-bool muyan::depthcam::DepthCameraControl::Disconnect()
+bool DepthCameraControl::Disconnect()
 {
 	if (!IsConnected())
 	{
@@ -215,7 +214,7 @@ bool muyan::depthcam::DepthCameraControl::Disconnect()
 	return false;
 }
 
-bool muyan::depthcam::DepthCameraControl::IsConnected() const
+bool DepthCameraControl::IsConnected() const
 {
 	if (State() == DepthCameraState::Opened || State() == DepthCameraState::Capturing)
 	{
@@ -224,19 +223,19 @@ bool muyan::depthcam::DepthCameraControl::IsConnected() const
 	return false;
 }
 
-DepthCameraState muyan::depthcam::DepthCameraControl::State() const
+DepthCameraState DepthCameraControl::State() const
 {
 	std::lock_guard<std::mutex> lock(impl->mtx);
 	return impl->state;
 }
 
-std::string muyan::depthcam::DepthCameraControl::DeviceModel() const
+std::string DepthCameraControl::DeviceModel() const
 {
 	std::lock_guard<std::mutex> lock(impl->mtx);
 	return impl->model;
 }
 
-bool muyan::depthcam::DepthCameraControl::EnableAutoReconnect()
+bool DepthCameraControl::EnableAutoReconnect()
 {
 	if (impl->opened && !IsConnected())
 	{
@@ -251,7 +250,7 @@ bool muyan::depthcam::DepthCameraControl::EnableAutoReconnect()
 	return false;
 }
 
-bool muyan::depthcam::DepthCameraControl::EnableAutoReconnect(int maxAttempts)
+bool DepthCameraControl::EnableAutoReconnect(int maxAttempts)
 {
 	if (impl->opened && !IsConnected())
 	{
@@ -270,7 +269,7 @@ bool muyan::depthcam::DepthCameraControl::EnableAutoReconnect(int maxAttempts)
 	return false;
 }
 
-bool muyan::depthcam::DepthCameraControl::EnableAutoReconnect(double maxSeconds)
+bool DepthCameraControl::EnableAutoReconnect(double maxSeconds)
 {
 
 	if (impl->opened && !IsConnected())
@@ -289,7 +288,7 @@ bool muyan::depthcam::DepthCameraControl::EnableAutoReconnect(double maxSeconds)
 	return false;
 }
 
-bool muyan::depthcam::DepthCameraControl::DisableAutoReconnect()
+bool DepthCameraControl::DisableAutoReconnect()
 {
 	if (impl->opened && !IsConnected())
 	{
@@ -307,7 +306,7 @@ bool muyan::depthcam::DepthCameraControl::DisableAutoReconnect()
 	return false;
 }
 
-bool muyan::depthcam::DepthCameraControl::SetRecoverCaptureAfterReconnect(bool enable)
+bool DepthCameraControl::SetRecoverCaptureAfterReconnect(bool enable)
 {
 	if (impl->opened && !IsConnected())
 	{
@@ -322,7 +321,7 @@ bool muyan::depthcam::DepthCameraControl::SetRecoverCaptureAfterReconnect(bool e
 	return false;
 }
 
-bool muyan::depthcam::DepthCameraControl::StartCapture()
+bool DepthCameraControl::StartCapture()
 {
 	if (!IsConnected())
 	{
@@ -345,7 +344,7 @@ bool muyan::depthcam::DepthCameraControl::StartCapture()
 	return true;
 }
 
-bool muyan::depthcam::DepthCameraControl::StopCapture()
+bool DepthCameraControl::StopCapture()
 {
 	if (State() != DepthCameraState::Capturing)
 	{
@@ -362,17 +361,17 @@ bool muyan::depthcam::DepthCameraControl::StopCapture()
 	return true;
 }
 
-bool muyan::depthcam::DepthCameraControl::IsCapturing() const
+bool DepthCameraControl::IsCapturing() const
 {
 	return (State()==DepthCameraState::Capturing);
 }
 
-bool muyan::depthcam::DepthCameraControl::FireSoftwareTrigger()
+bool DepthCameraControl::FireSoftwareTrigger()
 {
 	return false;
 }
 
-bool muyan::depthcam::DepthCameraControl::GetLastDepth(DepthFrameData& out) const
+bool DepthCameraControl::GetLastDepth(DepthFrameData& out) const
 {
 	if (!IsConnected())
 	{
@@ -396,13 +395,13 @@ bool muyan::depthcam::DepthCameraControl::GetLastDepth(DepthFrameData& out) cons
 	
 }
 
-void muyan::depthcam::DepthCameraControl::SetFrameCallback(std::function<void(const DepthFrameData&) > cb)
+void DepthCameraControl::SetFrameCallback(std::function<void(const DepthFrameData&) > cb)
 {
 	std::lock_guard<std::mutex> lock(impl->mtx);
 	impl->userCb = std::move(cb);
 }
 
-std::string muyan::depthcam::DepthCameraControl::LastError() const
+std::string DepthCameraControl::LastError() const
 {
 	std::lock_guard<std::mutex> lock(impl->mtx);
 	return impl->lastError;

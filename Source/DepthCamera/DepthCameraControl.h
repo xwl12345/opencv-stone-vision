@@ -5,70 +5,67 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "DepthCamera/DepthCameraExport.h"
 
-namespace muyan::depthcam
+enum class DepthCameraState
 {
+	Unknown,
+	NotFound,
+	Occupied,
+	Opened,
+	Closed,
+	Capturing,
+	Offlined,
+	Error,
+	Reconnecting,
+	ReconnectSuccess
+};
 
-	enum class DepthCameraState
-	{
-		Unknown,
-		NotFound,
-		Occupied,
-		Opened,
-		Closed,
-		Capturing,
-		Offlined,
-		Error,
-		Reconnecting,
-		ReconnectSuccess
-	};
+struct DepthCameraDesc 
+{
+	std::string serialNumber, model, ip, firmwareVersion;
+};
 
-	struct DepthCameraDesc 
-	{
-		std::string serialNumber, model, ip, firmwareVersion;
-	};
+class DEPTH_CAMERA_API DepthCameraControl
+{
+public:
+	DepthCameraControl();
+	~DepthCameraControl();
+	DepthCameraControl(const DepthCameraControl& other) = delete;
+	DepthCameraControl& operator=(const DepthCameraControl&) = delete;
 
-	class DepthCameraControl
-	{
-	public:
-		DepthCameraControl();
-		~DepthCameraControl();
-		DepthCameraControl(const DepthCameraControl& other) = delete;
-		DepthCameraControl& operator=(const DepthCameraControl&) = delete;
+	static bool InitSdk(bool useDirectCall = true);
+	static void ShutDownSdk();
+	static std::vector<DepthCameraDesc> DiscoverCameras();
+	static std::string SdkLastError();
 
-		static bool InitSdk(bool useDirectCall = true);
-		static void ShutDownSdk();
-		static std::vector<DepthCameraDesc> DiscoverCameras();
-		static std::string SdkLastError();
+	//打开/连接
+	bool OpenBySerial(const std::string serialNumber);//序列号连接
+	bool OpenByIp(const std::string ipAddress);
+	bool Connect();
+	bool Disconnect();
+	bool IsConnected() const;
+	DepthCameraState State() const;
+	std::string DeviceModel() const;
 
-		//打开/连接
-		bool OpenBySerial(const std::string serialNumber);//序列号连接
-		bool OpenByIp(const std::string ipAddress);
-		bool Connect();
-		bool Disconnect();
-		bool IsConnected() const;
-		DepthCameraState State() const;
-		std::string DeviceModel() const;
+	//断线重连：必须在connect前调用
+	bool EnableAutoReconnect(); //无限次
+	bool EnableAutoReconnect(int maxAttempts);//按次数
+	bool EnableAutoReconnect(double maxSeconds);//按时长
+	bool DisableAutoReconnect();
+	bool SetRecoverCaptureAfterReconnect(bool enable);
 
-		//断线重连：必须在connect前调用
-		bool EnableAutoReconnect(); //无限次
-		bool EnableAutoReconnect(int maxAttempts);//按次数
-		bool EnableAutoReconnect(double maxSeconds);//按时长
-		bool DisableAutoReconnect();
-		bool SetRecoverCaptureAfterReconnect(bool enable);
+	//采集
+	bool StartCapture();
+	bool StopCapture();
+	bool IsCapturing() const;
+	bool FireSoftwareTrigger();
+	bool GetLastDepth(DepthFrameData& out) const;
+	void SetFrameCallback(std::function<void(const DepthFrameData&)> cb);
 
-		//采集
-		bool StartCapture();
-		bool StopCapture();
-		bool IsCapturing() const;
-		bool FireSoftwareTrigger();
-		bool GetLastDepth(DepthFrameData& out) const;
-		void SetFrameCallback(std::function<void(const DepthFrameData&)> cb);
+	std::string LastError() const;
 
-		std::string LastError() const;
-
-	private:
-		struct Impl;
-		std::unique_ptr<Impl> impl;
-	};
-}
+private:
+	struct Impl;
+	std::unique_ptr<Impl> impl;
+};
